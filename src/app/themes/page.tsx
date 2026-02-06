@@ -84,18 +84,7 @@ export default function ThemesPage() {
                 }
 
                 // API 응답에서 받은 테마 데이터를 ThemeResponse 타입으로 변환
-                const newThemes = apiThemes.map((theme: ThemeResponse) => ({
-                    id: theme.id?.toString(),
-                    title: theme.name || '',
-                    category: theme.storeName || '',
-                    date: '오늘',
-                    location: theme.storeName?.split(' ')[0] || '',
-                    participants: theme.recommendedParticipants || '2-4인',
-                    subInfo: theme.runtime ? `${theme.runtime}분` : '',
-                    tags: theme.tags || [],
-                    image: theme.thumbnailUrl || '/default-thumbnail.svg',
-                    rating: '80',
-                }))
+                const newThemes = apiThemes as ThemeResponse[]
 
                 setThemes((prev) => (reset ? newThemes : [...prev, ...newThemes]))
             } else {
@@ -165,20 +154,7 @@ export default function ThemesPage() {
             const hasNext = response.data.data.hasNext || false
 
             setHasMore(hasNext)
-            setThemes(
-                apiThemes.map((theme: ThemeResponse) => ({
-                    id: theme.id?.toString(),
-                    title: theme.name || '',
-                    category: theme.storeName || '',
-                    date: '오늘',
-                    location: theme.storeName?.split(' ')[0] || '',
-                    participants: theme.recommendedParticipants || '2-4인',
-                    subInfo: theme.runtime ? `${theme.runtime}분` : '',
-                    tags: theme.tags || [],
-                    image: theme.thumbnailUrl || '/default-thumbnail.svg',
-                    rating: '80',
-                })),
-            )
+            setThemes(apiThemes as ThemeResponse[])
         }
         console.log('=== 필터 초기화 완료 ===')
     }
@@ -228,20 +204,7 @@ export default function ThemesPage() {
                     const hasNext = response.data.data.hasNext || false
 
                     setHasMore(hasNext)
-                    setThemes(
-                        apiThemes.map((theme: ThemeResponse) => ({
-                            id: theme.id?.toString(),
-                            title: theme.name || '',
-                            category: theme.storeName || '',
-                            date: '오늘',
-                            location: theme.storeName?.split(' ')[0] || '',
-                            participants: theme.recommendedParticipants || '2-4인',
-                            subInfo: theme.runtime ? `${theme.runtime}분` : '',
-                            tags: theme.tags || [],
-                            image: theme.thumbnailUrl || '/default-thumbnail.svg',
-                            rating: '80',
-                        })),
-                    )
+                    setThemes(apiThemes as ThemeResponse[])
                 }
             })
     }
@@ -280,20 +243,7 @@ export default function ThemesPage() {
             const hasNext = response.data.data.hasNext || false
 
             setHasMore(hasNext)
-            setThemes(
-                apiThemes.map((theme: ThemeResponse) => ({
-                    id: theme.id?.toString(),
-                    title: theme.name || '',
-                    category: theme.storeName || '',
-                    date: '오늘',
-                    location: theme.storeName?.split(' ')[0] || '',
-                    participants: theme.recommendedParticipants || '2-4인',
-                    subInfo: theme.runtime ? `${theme.runtime}분` : '',
-                    tags: theme.tags || [],
-                    image: theme.thumbnailUrl || '/default-thumbnail.svg',
-                    rating: '80',
-                })),
-            )
+            setThemes(apiThemes as ThemeResponse[])
         }
     }
 

@@ -3,7 +3,12 @@ import client from '@/lib/backend/client'
 import { useEffect, useState } from 'react'
 
 type ThemeTagResponse = components['schemas']['ThemeTagResponse']
-type SubRegionsResponse = components['schemas']['SubRegionsResponse']
+
+type RegionItem = {
+    id: number
+    subRegion: string
+    majorRegion: string
+}
 
 interface Participant {
     id: string
@@ -31,7 +36,7 @@ export function ThemeFilterModal({ isOpen, onClose, onApply, currentFilters }: T
     const [selectedParticipant, setSelectedParticipant] = useState<string>(currentFilters?.participant || '')
     const [activeRegion, setActiveRegion] = useState('서울')
     const [tags, setTags] = useState<ThemeTagResponse[]>([])
-    const [regions, setRegions] = useState<SubRegionsResponse[]>([])
+    const [regions, setRegions] = useState<RegionItem[]>([])
     const [loading, setLoading] = useState(false)
     const [loadingRegions, setLoadingRegions] = useState(false)
 
@@ -46,20 +51,28 @@ export function ThemeFilterModal({ isOpen, onClose, onApply, currentFilters }: T
         { id: '8', name: '8명 이상' },
     ]
 
-    const majorRegions = [
-        { id: '서울', name: '서울' },
-        { id: '경기/인천', name: '경기/인천' },
-        { id: '충청', name: '충청' },
-        { id: '경상', name: '경상' },
-        { id: '전라', name: '전라' },
-        { id: '강원', name: '강원' },
-        { id: '제주', name: '제주' },
-    ]
+    const regionCatalog: Record<string, RegionItem[]> = {
+        '서울': [
+            { id: 1, majorRegion: '서울', subRegion: '강남' },
+            { id: 2, majorRegion: '서울', subRegion: '홍대' },
+        ],
+        '전라': [
+            { id: 3, majorRegion: '전라', subRegion: '광주' },
+            { id: 4, majorRegion: '전라', subRegion: '여수' },
+            { id: 5, majorRegion: '전라', subRegion: '순천' },
+            { id: 6, majorRegion: '전라', subRegion: '목포' },
+        ],
+        '제주': [
+            { id: 7, majorRegion: '제주', subRegion: '제주' },
+        ],
+    }
+
+    const majorRegions = Object.keys(regionCatalog).map((name) => ({ id: name, name }))
 
     useEffect(() => {
         if (isOpen) {
             fetchTags()
-            fetchRegions()
+            fetchRegions(activeRegion)
             // 모달이 열릴 때 currentFilters 값으로 상태 초기화
             setSelectedRegions(currentFilters?.regions || [])
             setSelectedGenres(currentFilters?.genres || [])
@@ -67,25 +80,10 @@ export function ThemeFilterModal({ isOpen, onClose, onApply, currentFilters }: T
         }
     }, [isOpen, currentFilters])
 
-    const fetchRegions = async () => {
+    const fetchRegions = async (majorRegion: string) => {
         setLoadingRegions(true)
         try {
-            const response = await client.GET('/api/v1/regions', {
-                params: {
-                    query: {
-                        majorRegion: activeRegion,
-                    },
-                },
-            })
-
-            if (response?.data?.data) {
-                // 유효한 데이터만 필터링
-                const validRegions = response.data.data.filter(
-                    (region): region is SubRegionsResponse =>
-                        typeof region.id === 'number' && typeof region.subRegion === 'string',
-                )
-                setRegions(validRegions)
-            }
+            setRegions(regionCatalog[majorRegion] || [])
         } catch (error) {
             console.error('지역 목록을 불러오는 중 오류가 발생했습니다:', error)
         } finally {
@@ -132,7 +130,7 @@ export function ThemeFilterModal({ isOpen, onClose, onApply, currentFilters }: T
 
     const handleRegionClick = async (majorRegion: string) => {
         setActiveRegion(majorRegion)
-        await fetchRegions()
+        await fetchRegions(majorRegion)
     }
 
     const handleReset = () => {
@@ -140,12 +138,13 @@ export function ThemeFilterModal({ isOpen, onClose, onApply, currentFilters }: T
         setSelectedGenres([])
         setSelectedParticipant('')
         setActiveRegion('서울')
+        fetchRegions('서울')
     }
 
     const handleApply = () => {
         const selectedSubRegions = selectedRegions
             .map((regionId) => {
-                const region = regions.find((r) => r.id === Number(regionId || 0)) as SubRegionsResponse | undefined
+                const region = regions.find((r) => r.id === Number(regionId || 0)) as RegionItem | undefined
                 return region?.subRegion || ''
             })
             .filter(Boolean) as string[]
@@ -174,7 +173,7 @@ export function ThemeFilterModal({ isOpen, onClose, onApply, currentFilters }: T
                 ? `지역: ${selectedRegions
                       .map((regionId) => {
                           const region = regions.find((r) => r.id === Number(regionId || 0)) as
-                              | SubRegionsResponse
+                              | RegionItem
                               | undefined
                           return region?.subRegion || ''
                       })
@@ -268,11 +267,11 @@ export function ThemeFilterModal({ isOpen, onClose, onApply, currentFilters }: T
                                             </div>
                                         ) : (
                                             regions.map((region) => (
-                                                <div key={region.id} className="flex items-center group">
+                                                <div key={region.subRegion} className="flex items-center group">
                                                     <div className="relative flex items-center">
                                                         <input
                                                             type="checkbox"
-                                                            id={region.subRegion}
+                                                            id={`region-${region.subRegion}`}
                                                             checked={selectedRegions.includes(String(region.id))}
                                                             onChange={() => handleRegionToggle(region.id)}
                                                             className="peer w-4 h-4 rounded border border-gray-600 text-[#FFB230] focus:ring-[#FFB230] focus:ring-2 focus:ring-offset-2 cursor-pointer appearance-none checked:bg-[#FFB230] checked:border-[#FFB230] transition-colors"
@@ -289,9 +288,9 @@ export function ThemeFilterModal({ isOpen, onClose, onApply, currentFilters }: T
                                                             />
                                                         </svg>
                                                         <label
-                                                            htmlFor={region.subRegion}
+                                                            htmlFor={`region-${region.subRegion}`}
                                                             className={`ml-2 text-sm cursor-pointer select-none ${
-                                                                selectedRegions.includes(String(region.id))
+                                                                region.id && selectedRegions.includes(String(region.id))
                                                                     ? 'text-[#FFB230] font-medium'
                                                                     : 'text-gray-300 group-hover:text-gray-200'
                                                             }`}

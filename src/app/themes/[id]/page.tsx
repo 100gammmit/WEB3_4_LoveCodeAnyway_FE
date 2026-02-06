@@ -1,6 +1,5 @@
 'use client'
 
-import { KakaoMap } from '@/components/common/KakaoMap'
 import { PageLoading } from '@/components/common/PageLoading'
 import { StarRating } from '@/components/stat/StarRating'
 import { components } from '@/lib/backend/apiV1/schema'
@@ -8,9 +7,15 @@ import client from '@/lib/backend/client'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type ThemeDetailResponse = components['schemas']['ThemeDetailResponse']
+
+declare global {
+    interface Window {
+        kakao: any
+    }
+}
 
 export default function ThemeDetailPage() {
     const params = useParams()
@@ -20,6 +25,8 @@ export default function ThemeDetailPage() {
     const [themeDetail, setThemeDetail] = useState<ThemeDetailResponse | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const mapRef = useRef<HTMLDivElement>(null)
+    const [mapError, setMapError] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchThemeDetail = async () => {
@@ -50,6 +57,84 @@ export default function ThemeDetailPage() {
             fetchThemeDetail()
         }
     }, [themeId])
+
+    useEffect(() => {
+        const address = themeDetail?.storeInfo?.address?.trim()
+        if (!address) return
+        if (typeof window === 'undefined') return
+        setMapError(null)
+
+        const loadScript = () => {
+            return new Promise<void>((resolve, reject) => {
+                if (window.kakao && window.kakao.maps) {
+                    resolve()
+                    return
+                }
+
+                const script = document.createElement('script')
+                script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY}&libraries=services&autoload=false`
+                script.async = true
+                script.onload = () => resolve()
+                script.onerror = (err) => reject(err)
+                document.head.appendChild(script)
+            })
+        }
+
+        const initializeMap = () => {
+            if (!mapRef.current) {
+                setMapError('지도를 표시할 영역을 찾을 수 없습니다.')
+                return
+            }
+
+            if (!window.kakao || !window.kakao.maps) {
+                setMapError('카카오 지도 SDK 로드에 실패했습니다.')
+                return
+            }
+
+            mapRef.current.innerHTML = ''
+
+            const mapOption = {
+                center: new window.kakao.maps.LatLng(33.450701, 126.570667),
+                level: 3,
+            }
+
+            const map = new window.kakao.maps.Map(mapRef.current, mapOption)
+            const geocoder = new window.kakao.maps.services.Geocoder()
+
+            geocoder.addressSearch(address, function (result: any, status: any) {
+                if (status === window.kakao.maps.services.Status.OK) {
+                    const coords = new window.kakao.maps.LatLng(result[0].y, result[0].x)
+                    const marker = new window.kakao.maps.Marker({
+                        map,
+                        position: coords,
+                    })
+                    const infowindow = new window.kakao.maps.InfoWindow({
+                        content: `<div style="width:150px;text-align:center;padding:6px 0;">${
+                            themeDetail?.storeInfo?.name || themeDetail?.name || ''
+                        }</div>`,
+                    })
+                    infowindow.open(map, marker)
+                    map.setCenter(coords)
+                } else {
+                    setMapError('주소를 좌표로 변환하지 못했습니다.')
+                }
+            })
+        }
+
+        loadScript()
+            .then(() => {
+                if (window.kakao.maps.load) {
+                    window.kakao.maps.load(() => {
+                        initializeMap()
+                    })
+                } else {
+                    initializeMap()
+                }
+            })
+            .catch(() => {
+                setMapError('카카오 지도 초기화에 실패했습니다.')
+            })
+    }, [themeDetail])
 
     const handleSetWishTheme = async () => {
         try {
@@ -204,10 +289,13 @@ export default function ThemeDetailPage() {
                             <div className="w-full md:w-1/2">
                                 <h2 className="text-2xl font-bold mb-4 text-white">매장 위치</h2>
                                 <div className="h-64 bg-gray-700 rounded-lg mb-4 relative">
-                                    <KakaoMap
-                                        address={themeDetail.storeInfo.address || ''}
-                                        storeName={themeDetail.storeInfo.name}
-                                    />
+                                    {mapError ? (
+                                        <div className="flex items-center justify-center h-full text-red-400 text-sm">
+                                            {mapError}
+                                        </div>
+                                    ) : (
+                                        <div ref={mapRef} className="w-full h-full rounded-lg" />
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <p className="text-gray-300">{themeDetail.storeInfo.address}</p>
