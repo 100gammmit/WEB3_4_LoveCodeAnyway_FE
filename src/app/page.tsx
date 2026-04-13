@@ -161,7 +161,7 @@ export default function HomePage() {
     return (
         <main className="min-h-screen bg-gray-900">
             {/* Section 1: 메인 배너 */}
-            <section className="w-full h-[450px] relative bg-gray-800">
+            <section className="w-full h-[350px] relative bg-gray-800">
                 <div className="max-w-7xl mx-auto h-full relative flex flex-col items-center justify-start text-center pt-20">
                     <Image src="/logo.svg" alt="또방 로고" width={250} height={100} priority className="mb-6" />
                     <h1 className="text-white text-3xl font-bold">방탈출 메이트 찾기, 또방</h1>
